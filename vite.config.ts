@@ -25,5 +25,6 @@ export default defineConfig({
   base: './',
   plugins: [vue(), tailwindcss(), csp()],
   build: { target: 'es2020', chunkSizeWarningLimit: 700 },
-  test: { environment: 'node', include: ['tests/**/*.test.ts'] },
+  // 30s: the first test to touch SheetJS pays a cold-import cost that can exceed 5s on busy machines.
+  test: { environment: 'node', include: ['tests/**/*.test.ts'], testTimeout: 30_000 },
 })
