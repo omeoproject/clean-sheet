@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import DataTable from './components/DataTable.vue'
 import FileDropzone from './components/FileDropzone.vue'
+import Landing from './components/Landing.vue'
 import { useCleaner } from './composables/useCleaner'
 import { FORMAT_WARNING } from './core/export'
 
@@ -43,7 +44,8 @@ function startOver() {
           <svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
         </div>
         <div>
-          <h1 class="text-xl font-bold leading-tight">CleanSheet</h1>
+          <h1 v-if="c.workbook.value" class="text-xl font-bold leading-tight">CleanSheet</h1>
+          <p v-else class="text-xl font-bold leading-tight">CleanSheet</p>
           <p class="text-sm text-slate-600">Find and remove duplicate rows in CSV &amp; Excel files</p>
         </div>
       </div>
@@ -52,8 +54,8 @@ function startOver() {
       </button>
     </header>
 
-    <!-- Privacy message: always visible -->
-    <p class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="note">
+    <!-- Privacy message (the landing hero carries its own) -->
+    <p v-if="c.workbook.value" class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="note">
       <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 flex-none" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6l8-3zM9 12l2 2 4-4" /></svg>
       <span><strong>100% private.</strong> Your files are processed entirely in this browser tab. Nothing is uploaded, no analytics or tracking is used, and the page is blocked from making network requests.</span>
     </p>
@@ -75,12 +77,15 @@ function startOver() {
     </div>
 
     <main class="flex flex-col gap-6">
-      <FileDropzone
-        v-if="!c.workbook.value"
-        :disabled="!!c.busy.value"
-        @file="c.loadFile"
-        @reject="(m) => (c.error.value = m)"
-      />
+      <Landing v-if="!c.workbook.value">
+        <template #dropzone>
+          <FileDropzone
+            :disabled="!!c.busy.value"
+            @file="c.loadFile"
+            @reject="(m) => (c.error.value = m)"
+          />
+        </template>
+      </Landing>
 
       <template v-else-if="c.dataset.value">
         <!-- 1. File & sheet -->
@@ -232,7 +237,9 @@ function startOver() {
     </main>
 
     <footer class="mt-auto pt-6 text-center text-xs text-slate-500">
-      CleanSheet runs locally in your browser · Open source (MIT) · Built with Vue, Tailwind CSS and SheetJS
+      CleanSheet runs locally in your browser · Open source (MIT) ·
+      <a href="https://github.com/omeoproject/clean-sheet" class="underline" rel="noopener">Source on GitHub</a> ·
+      Built with Vue, Tailwind CSS and SheetJS
     </footer>
   </div>
 </template>
