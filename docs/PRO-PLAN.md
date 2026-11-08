@@ -1,6 +1,8 @@
 # CleanSheet Pro: readiness plan (step 5)
 
-**Status: proposed, NOT implemented. No payment code exists, and nothing should be sold until every box in "Definition of ready" is checked.**
+**Status update:** the app-side of Pro (offline license verification, plan limits, upgrade UI, pricing copy) is now built and tested, and is OFF in production until configured. See [GO-LIVE.md](GO-LIVE.md) for what remains. Payment provider setup, key delivery/automation and policies are NOT done. Nothing should be sold until every box in "Definition of ready" is checked.
+
+*(Original note: this began as a proposed plan, written before any code existed.)*
 
 ## Proposed plans (hypothesis to test, not a commitment)
 

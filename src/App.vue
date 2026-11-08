@@ -3,12 +3,19 @@ import { computed, ref } from 'vue'
 import DataTable from './components/DataTable.vue'
 import FileDropzone from './components/FileDropzone.vue'
 import Landing from './components/Landing.vue'
+import LicensePanel from './components/LicensePanel.vue'
 import { useCleaner } from './composables/useCleaner'
+import { useLicense } from './composables/useLicense'
+import { PRO_ENABLED } from './config'
 import { FORMAT_WARNING } from './core/export'
 
 const c = useCleaner()
+const lic = useLicense()
+void lic.restore()
+const ent = c.entitlements
 const confirming = ref(false)
 const showGroups = ref(false)
+const showLicense = ref(false)
 
 const stats = computed(() => c.result.value.stats)
 const hasKey = computed(() => c.selectedColumns.value.length > 0)
@@ -16,8 +23,30 @@ const cardClass = 'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm'
 
 function toggleColumn(i: number) {
   const s = c.selectedColumns.value
-  c.selectedColumns.value = s.includes(i) ? s.filter((x) => x !== i) : [...s, i]
   confirming.value = false
+  if (s.includes(i)) {
+    c.selectedColumns.value = s.filter((x) => x !== i)
+  } else if (!ent.value.advancedMatching && s.length >= 1) {
+    // Free plan: one key column. Switch to the newly chosen column and explain.
+    c.selectedColumns.value = [i]
+    c.notice.value = 'The free plan matches on one column at a time. Pro lets you combine several columns into one key.'
+  } else {
+    c.selectedColumns.value = [...s, i]
+  }
+}
+
+function selectAllColumns() {
+  if (!ent.value.advancedMatching) {
+    c.notice.value = 'Selecting several key columns is a Pro feature. The free plan matches on one column.'
+    showLicense.value = true
+    return
+  }
+  c.selectedColumns.value = c.headers.value.map((_, i) => i)
+}
+
+function downloadXlsx() {
+  if (!ent.value.xlsxExport) showLicense.value = true
+  void c.exportAs('xlsx')
 }
 
 function confirmRemoval() {
@@ -49,10 +78,17 @@ function startOver() {
           <p class="text-sm text-slate-600">Find and remove duplicate rows in CSV &amp; Excel files</p>
         </div>
       </div>
-      <button v-if="c.workbook.value" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50" @click="startOver">
-        Open another file
-      </button>
+      <div class="flex items-center gap-2">
+        <button v-if="PRO_ENABLED" type="button" class="rounded-lg border border-indigo-300 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-900 hover:bg-indigo-100" :aria-expanded="showLicense" @click="showLicense = !showLicense">
+          {{ lic.isPro.value ? 'Pro ✓' : 'Upgrade to Pro' }}
+        </button>
+        <button v-if="c.workbook.value" type="button" class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium hover:bg-slate-50" @click="startOver">
+          Open another file
+        </button>
+      </div>
     </header>
+
+    <LicensePanel v-if="PRO_ENABLED && showLicense" @close="showLicense = false" />
 
     <!-- Privacy message (the landing hero carries its own) -->
     <p v-if="c.workbook.value" class="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900" role="note">
@@ -68,7 +104,10 @@ function startOver() {
       </div>
       <div v-if="c.error.value" class="flex items-start justify-between gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
         <span><strong>Error:</strong> {{ c.error.value }}</span>
-        <button type="button" class="font-medium underline" @click="c.clearMessages()">Dismiss</button>
+        <span class="flex flex-none gap-3">
+          <button v-if="PRO_ENABLED && !lic.isPro.value" type="button" class="font-medium underline" @click="showLicense = true">See Pro</button>
+          <button type="button" class="font-medium underline" @click="c.clearMessages()">Dismiss</button>
+        </span>
       </div>
       <div v-if="c.notice.value" class="flex items-start justify-between gap-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900" role="status">
         <span>{{ c.notice.value }}</span>
@@ -136,7 +175,7 @@ function startOver() {
               </div>
             </fieldset>
             <div class="mt-3 flex gap-3 text-sm">
-              <button type="button" class="font-medium text-indigo-700 underline" @click="c.selectedColumns.value = c.headers.value.map((_, i) => i)">Select all</button>
+              <button type="button" class="font-medium text-indigo-700 underline" @click="selectAllColumns">Select all<span v-if="!ent.advancedMatching"> (Pro)</span></button>
               <button type="button" class="font-medium text-indigo-700 underline" @click="c.selectedColumns.value = []">Clear</button>
             </div>
           </section>
@@ -151,8 +190,8 @@ function startOver() {
                 <label for="blank" class="block font-medium">Blank values</label>
                 <select id="blank" v-model="c.options.blankMode" class="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2">
                   <option value="skip-all">Never treat rows with all key cells blank as duplicates</option>
-                  <option value="skip-any">Never treat rows with any blank key cell as duplicates</option>
-                  <option value="match">Treat blanks as a normal value (blank = blank)</option>
+                  <option value="skip-any" :disabled="!ent.advancedMatching">Never treat rows with any blank key cell as duplicates{{ ent.advancedMatching ? '' : ' (Pro)' }}</option>
+                  <option value="match" :disabled="!ent.advancedMatching">Treat blanks as a normal value (blank = blank){{ ent.advancedMatching ? '' : ' (Pro)' }}</option>
                 </select>
               </div>
               <fieldset>
@@ -230,7 +269,7 @@ function startOver() {
           <p class="mt-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-900" role="note"><strong>Heads up:</strong> {{ FORMAT_WARNING }}</p>
           <div class="mt-4 flex flex-wrap gap-3">
             <button type="button" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40" :disabled="!!c.busy.value" @click="c.exportAs('csv')">Download CSV</button>
-            <button type="button" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40" :disabled="!!c.busy.value" @click="c.exportAs('xlsx')">Download XLSX</button>
+            <button type="button" class="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-40" :disabled="!!c.busy.value" @click="downloadXlsx">Download XLSX<span v-if="!ent.xlsxExport"> (Pro)</span></button>
           </div>
         </section>
       </template>

@@ -7,3 +7,7 @@ dist/
 .claude/
 .vscode/
 coverage/
+
+# Seller license keys: NEVER commit
+keys/
+*.jwk.json

@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { PRICE_LABEL, PRO_ENABLED } from '../config'
+import { FREE_MAX_ROWS } from '../core/plans'
+
 const REPO = 'https://github.com/omeoproject/clean-sheet'
 
 const before = [
@@ -39,7 +42,12 @@ const faqs = [
   { q: 'How does it decide what a duplicate is?', a: 'Rows are duplicates when all the columns you tick have the same value. You choose whether capitals and leading/trailing spaces count, how blank cells are treated, and whether to keep the first or the last occurrence of each group.' },
   { q: 'Can I undo a mistake?', a: 'Yes. Nothing is removed until you confirm, and you can undo the last removal or reset to the original data at any time before downloading.' },
   { q: 'Does it change my data in other ways?', a: 'Only in one case: in a CSV export, text cells that begin with =, +, - or @ get a leading apostrophe so spreadsheet apps cannot run them as formulas. You are told how many cells were affected. Numbers and normal text are left alone.' },
-  { q: 'What does it cost?', a: 'CleanSheet is free to use, with no sign-up. The source code is open under the MIT license.' },
+  {
+    q: 'What does it cost?',
+    a: PRO_ENABLED
+      ? `Free for files up to ${FREE_MAX_ROWS.toLocaleString()} rows, with no sign-up. Pro${PRICE_LABEL ? ` (${PRICE_LABEL})` : ''} adds larger files, multi-column keys, blank-value modes and Excel export. Payment happens on the payment provider’s own page, so your files are never part of it. The source code is open under the MIT license.`
+      : 'CleanSheet is free to use, with no sign-up. The source code is open under the MIT license.',
+  },
 ]
 </script>
 
@@ -141,6 +149,34 @@ const faqs = [
           <p class="mt-2 text-slate-600">{{ s.d }}</p>
         </li>
       </ol>
+    </section>
+
+    <!-- Pricing (only when Pro can actually be bought) -->
+    <section v-if="PRO_ENABLED" id="pricing" class="scroll-mt-6" aria-labelledby="price-h">
+      <h2 id="price-h" class="text-center text-2xl font-bold sm:text-3xl">Simple pricing</h2>
+      <div class="mx-auto mt-8 grid max-w-3xl gap-5 md:grid-cols-2">
+        <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 class="text-lg font-semibold">Free</h3>
+          <p class="mt-1 text-3xl font-extrabold">$0</p>
+          <ul class="mt-4 space-y-2 text-sm text-slate-700">
+            <li>✓ Up to {{ FREE_MAX_ROWS.toLocaleString() }} rows per file</li>
+            <li>✓ Match on one column</li>
+            <li>✓ Ignore capitals and spaces, keep first or last</li>
+            <li>✓ CSV export</li>
+          </ul>
+        </div>
+        <div class="rounded-2xl border-2 border-indigo-600 bg-white p-6 shadow-sm">
+          <h3 class="text-lg font-semibold">Pro</h3>
+          <p class="mt-1 text-3xl font-extrabold">{{ PRICE_LABEL || 'Subscription' }}</p>
+          <ul class="mt-4 space-y-2 text-sm text-slate-700">
+            <li>✓ Larger files (up to 500,000 rows)</li>
+            <li>✓ Combine several columns into one key</li>
+            <li>✓ Blank-value modes</li>
+            <li>✓ Excel (XLSX) export</li>
+          </ul>
+          <a href="#tool" class="mt-5 inline-block text-sm font-semibold text-indigo-700 underline">Start free, upgrade any time</a>
+        </div>
+      </div>
     </section>
 
     <!-- Use cases -->

@@ -77,6 +77,10 @@ With trimming on, whitespace-only cells count as blank.
 - XLSX cannot hold more than 32,767 characters in a cell. If a cell is longer, the XLSX export stops with an error naming the row and column; nothing is truncated. Use CSV instead.
 - **Performance (measured on one dev machine, Node):** a 500,000-row / 34 MB CSV takes about 11 s to parse and about 1 GB of memory; deduplication takes about 1.4 s. A 200,000-row XLSX export takes about 15 s. All work runs on the browser's main thread, so the tab may be unresponsive during these steps.
 
+## Optional Pro tier (off by default)
+
+The code includes an optional paid tier, disabled unless `VITE_CHECKOUT_URL` and `VITE_LICENSE_PUBLIC_KEY` are set at build time. With them unset (the default and what the public site ships today), there are no limits and no Pro UI. License keys are signed with ECDSA P-256 and verified **offline in the browser**, so file data is never involved in licensing. See [docs/GO-LIVE.md](docs/GO-LIVE.md) for setup and the honest limits of client-side enforcement, and [docs/PRO-PLAN.md](docs/PRO-PLAN.md) for the plan. The seller tool is `tools/license-tool.mjs`; never commit the `keys/` folder.
+
 ## Dependency licenses and security
 
 | Package | License | Role |

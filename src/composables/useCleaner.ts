@@ -8,12 +8,15 @@ import {
   type ExportFormat,
 } from '../core/export'
 import { openWorkbook, type OpenedWorkbook } from '../core/parse'
+import { checkRowLimit, clampOptions } from '../core/plans'
 import { CleanSheetError, type Dataset, type Row } from '../core/types'
+import { useLicense } from './useLicense'
 
 /** Let the browser paint the loading indicator before a long synchronous task. */
 const nextFrame = () => new Promise<void>((r) => setTimeout(r, 30))
 
 export function useCleaner() {
+  const { entitlements } = useLicense()
   const workbook = shallowRef<OpenedWorkbook | null>(null)
   const sheetName = ref('')
   const dataset = shallowRef<Dataset | null>(null)
@@ -36,13 +39,20 @@ export function useCleaner() {
   const removedSoFar = computed(() => originalCount.value - rows.value.length)
 
   const result = computed(() =>
-    findDuplicates(rows.value, {
-      columns: [...selectedColumns.value].sort((a, b) => a - b),
-      caseSensitive: options.caseSensitive,
-      trim: options.trim,
-      blankMode: options.blankMode,
-      keep: options.keep,
-    }),
+    findDuplicates(
+      rows.value,
+      // Plan limits are enforced here too, so UI state alone can never unlock Pro matching.
+      clampOptions(
+        {
+          columns: [...selectedColumns.value].sort((a, b) => a - b),
+          caseSensitive: options.caseSensitive,
+          trim: options.trim,
+          blankMode: options.blankMode,
+          keep: options.keep,
+        },
+        entitlements.value,
+      ),
+    ),
   )
 
   const removalRows = computed(() => rows.value.filter((r) => result.value.removeIds.has(r.id)))
@@ -68,6 +78,8 @@ export function useCleaner() {
       const wb = await openWorkbook({ name: file.name, data })
       const first = wb.sheetNames[0]
       const ds = wb.getDataset(first) // may throw EMPTY_SHEET etc. before we replace state
+      const limit = checkRowLimit(ds.rows.length, entitlements.value)
+      if (limit) throw new CleanSheetError('TOO_MANY_ROWS', limit)
       workbook.value = wb
       applyDataset(first, ds)
     } catch (e) {
@@ -92,7 +104,10 @@ export function useCleaner() {
     busy.value = `Loading sheet "${name}"…`
     try {
       await nextFrame()
-      applyDataset(name, workbook.value.getDataset(name))
+      const ds = workbook.value.getDataset(name)
+      const limit = checkRowLimit(ds.rows.length, entitlements.value)
+      if (limit) throw new CleanSheetError('TOO_MANY_ROWS', limit)
+      applyDataset(name, ds)
     } catch (e) {
       fail(e) // keep the previously loaded sheet intact
     } finally {
@@ -136,6 +151,10 @@ export function useCleaner() {
   async function exportAs(format: ExportFormat) {
     if (!workbook.value || !dataset.value) return
     clearMessages()
+    if (format === 'xlsx' && !entitlements.value.xlsxExport) {
+      error.value = 'XLSX export is a Pro feature. CSV export is free and opens in Excel.'
+      return
+    }
     busy.value = 'Preparing download…'
     try {
       await nextFrame()
@@ -165,7 +184,7 @@ export function useCleaner() {
 
   return {
     workbook, sheetName, dataset, rows, headers, selectedColumns, options, busy, error, notice,
-    result, removalRows, originalCount, removedSoFar,
+    result, removalRows, originalCount, removedSoFar, entitlements,
     canUndo: computed(() => history.value.length > 0),
     loadFile, selectSheet, applyRemoval, undo, reset, closeFile, exportAs, clearMessages,
   }
