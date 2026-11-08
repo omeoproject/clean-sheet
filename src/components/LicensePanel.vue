@@ -15,6 +15,11 @@ const expiry = computed(() => {
   return s && s.state !== 'invalid' ? new Date(s.payload.exp * 1000).toLocaleDateString() : ''
 })
 
+function onRemove() {
+  message.value = null
+  remove()
+}
+
 async function onActivate() {
   message.value = null
   const s = await activate(key.value)
@@ -38,7 +43,7 @@ async function onActivate() {
 
     <div v-if="isPro && status?.state === 'valid'" class="mt-2 text-sm text-indigo-950">
       <p><strong>Pro is active</strong> on this browser until {{ expiry }}.</p>
-      <button type="button" class="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-indigo-100" @click="remove">Remove license from this browser</button>
+      <button type="button" class="mt-3 rounded-lg border border-indigo-300 bg-white px-3 py-1.5 text-sm font-medium hover:bg-indigo-100" @click="onRemove">Remove license from this browser</button>
     </div>
 
     <template v-else>
